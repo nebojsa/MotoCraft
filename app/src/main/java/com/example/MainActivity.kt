@@ -7,8 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +30,7 @@ import com.example.ui.components.AddMaterialDialog
 import com.example.ui.components.AddModDialog
 import com.example.ui.components.AddProjectDialog
 import com.example.ui.components.AddReminderDialog
+import com.example.ui.components.GlobalSearchBarCard
 import com.example.util.InvoiceGeneratorDialog
 import com.example.util.OnlinePaymentCheckoutDialog
 import com.example.ui.components.MotoBottomNavBar
@@ -78,6 +82,7 @@ fun MotoAppContent(viewModel: MotoViewModel) {
     var selectedRecordForInvoice by remember { mutableStateOf<MaintenanceRecord?>(null) }
     var showOnlinePaymentDialog by remember { mutableStateOf(false) }
     var selectedRecordForPayment by remember { mutableStateOf<MaintenanceRecord?>(null) }
+    var globalSearchQuery by remember { mutableStateOf("") }
 
     // Reactive database states
     val motorcycles by viewModel.motorcycles.collectAsStateWithLifecycle()
@@ -107,13 +112,50 @@ fun MotoAppContent(viewModel: MotoViewModel) {
         },
         containerColor = CarbonDark
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(CarbonDark)
                 .padding(innerPadding)
         ) {
-            when (selectedTab) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                GlobalSearchBarCard(
+                    query = globalSearchQuery,
+                    onQueryChange = { globalSearchQuery = it },
+                    buildProjects = buildProjects,
+                    modifications = mods,
+                    marketplaceItems = marketplaceItems,
+                    maintenanceRecords = maintenanceRecords,
+                    onBuyMarketplaceItem = { item ->
+                        selectedRecordForPayment = MaintenanceRecord(
+                            serviceType = item.title,
+                            cost = item.price,
+                            mileage = 0,
+                            description = "Marketplace purchase: ${item.description}"
+                        )
+                        showOnlinePaymentDialog = true
+                    },
+                    onPayMaintenanceRecord = { record ->
+                        selectedRecordForPayment = record
+                        showOnlinePaymentDialog = true
+                    },
+                    onGenerateInvoiceRecord = { record ->
+                        selectedRecordForInvoice = record
+                        showInvoiceDialog = true
+                    }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+            ) {
+                when (selectedTab) {
                 NavTab.DASHBOARD -> DashboardScreen(
                     motorcycle = selectedBike,
                     stats = budgetStats,
@@ -170,6 +212,7 @@ fun MotoAppContent(viewModel: MotoViewModel) {
             }
         }
     }
+}
 
     // Dialogs
     if (showAddBikeDialog) {

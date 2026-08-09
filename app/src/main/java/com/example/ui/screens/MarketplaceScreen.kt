@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,19 +17,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,10 +68,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entities.MarketplaceItem
@@ -68,7 +83,6 @@ import com.example.data.entities.PartCondition
 import com.example.ui.components.BadgeChip
 import com.example.ui.components.PartCompatibilitySearchCard
 import com.example.ui.components.PartCompatibilitySearchDialog
-import com.example.ui.components.launchGoogleSearch
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CardBorderDark
 import com.example.ui.theme.CardDark
@@ -80,6 +94,7 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.VioletPurple
+import com.example.util.OnlinePaymentCheckoutDialog
 
 @Composable
 fun MarketplaceScreen(
@@ -88,6 +103,7 @@ fun MarketplaceScreen(
     onAddListingClicked: () -> Unit,
     onToggleSave: (MarketplaceItem) -> Unit,
     onDeleteItem: (MarketplaceItem) -> Unit,
+    onBuyNowClicked: (MarketplaceItem) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -95,6 +111,7 @@ fun MarketplaceScreen(
     var selectedTab by remember { mutableStateOf(0) } // 0 = All, 1 = Saved, 2 = My Listings
     var activeContactSellerItem by remember { mutableStateOf<MarketplaceItem?>(null) }
     var activeCompatibilityCheckItem by remember { mutableStateOf<MarketplaceItem?>(null) }
+    var activeBuyNowItem by remember { mutableStateOf<MarketplaceItem?>(null) }
 
     val defaultBikeName = motorcycle?.let { "${it.year} ${it.name} ${it.model}".trim() } ?: "Yamaha MT-09 2023"
 
@@ -129,95 +146,92 @@ fun MarketplaceScreen(
         containerColor = Color.Transparent,
         modifier = modifier.fillMaxSize()
     ) { padding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 80.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .testTag("marketplace_screen_list"),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .testTag("marketplace_parts_grid")
         ) {
-            item { Spacer(modifier = Modifier.height(4.dp)) }
+            // Search Bar & Fitment Verifier Header
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search parts, exhaust, seat foam, fitment...", color = TextMuted) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = AmberOrange) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CardDark,
+                            unfocusedContainerColor = CardDark,
+                            focusedBorderColor = AmberOrange,
+                            unfocusedBorderColor = CardBorderDark,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("marketplace_search_input")
+                    )
 
-            // Search Bar & Fitment Verifier
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search parts, exhaust, seat foam, fitment...", color = TextMuted) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = AmberOrange) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = CardDark,
-                        unfocusedContainerColor = CardDark,
-                        focusedBorderColor = AmberOrange,
-                        unfocusedBorderColor = CardBorderDark,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("marketplace_search_input")
-                )
-            }
+                    PartCompatibilitySearchCard(defaultBikeModel = defaultBikeName)
 
-            // Google Part Compatibility Search Card
-            item {
-                PartCompatibilitySearchCard(defaultBikeModel = defaultBikeName)
-            }
-
-            // Tabs Row
-            item {
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = SurfaceDark,
-                    contentColor = AmberOrange,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = AmberOrange
+                    // Tabs Row
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = SurfaceDark,
+                        contentColor = AmberOrange,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.Indicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                color = AmberOrange
+                            )
+                        }
+                    ) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = { Text("Community Parts", color = if (selectedTab == 0) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = { Text("Saved Parts", color = if (selectedTab == 1) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                        )
+                        Tab(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            text = { Text("My Listings", color = if (selectedTab == 2) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                         )
                     }
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Community Parts", color = if (selectedTab == 0) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold) }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Saved Parts", color = if (selectedTab == 1) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold) }
-                    )
-                    Tab(
-                        selected = selectedTab == 2,
-                        onClick = { selectedTab = 2 },
-                        text = { Text("My Listings", color = if (selectedTab == 2) AmberOrange else TextSecondary, fontWeight = FontWeight.Bold) }
-                    )
-                }
-            }
 
-            // Categories Chips
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        FilterChipPill(
-                            label = "All Categories",
-                            isSelected = selectedCategoryFilter == null,
-                            onClick = { selectedCategoryFilter = null }
-                        )
-                    }
-                    items(categories) { cat ->
-                        FilterChipPill(
-                            label = cat,
-                            isSelected = selectedCategoryFilter == cat,
-                            onClick = { selectedCategoryFilter = cat }
-                        )
+                    // Categories Chips
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChipPill(
+                                label = "All Categories",
+                                isSelected = selectedCategoryFilter == null,
+                                onClick = { selectedCategoryFilter = null }
+                            )
+                        }
+                        items(categories) { cat ->
+                            FilterChipPill(
+                                label = cat,
+                                isSelected = selectedCategoryFilter == cat,
+                                onClick = { selectedCategoryFilter = cat }
+                            )
+                        }
                     }
                 }
             }
 
             if (filteredItems.isEmpty()) {
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -236,18 +250,20 @@ fun MarketplaceScreen(
                     }
                 }
             } else {
-                items(filteredItems) { item ->
-                    MarketplaceItemCard(
+                items(filteredItems, key = { it.id }) { item ->
+                    MarketplaceGridPartCard(
                         item = item,
                         onToggleSave = { onToggleSave(item) },
                         onContactSeller = { activeContactSellerItem = item },
                         onVerifyFitment = { activeCompatibilityCheckItem = item },
+                        onBuyNow = {
+                            activeBuyNowItem = item
+                            onBuyNowClicked(item)
+                        },
                         onDelete = { onDeleteItem(item) }
                     )
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
@@ -257,6 +273,19 @@ fun MarketplaceScreen(
             bikeModel = defaultBikeName,
             partName = "${item.title} (${item.fitment})",
             onDismiss = { activeCompatibilityCheckItem = null }
+        )
+    }
+
+    // Online Payment Checkout Dialog for "Buy Now"
+    activeBuyNowItem?.let { item ->
+        OnlinePaymentCheckoutDialog(
+            itemTitle = item.title,
+            amountToPay = item.price,
+            customerEmail = item.sellerContact.ifBlank { "rider@motocraft.app" },
+            onPaymentSuccess = { result ->
+                // Payment success logic handled inside dialog
+            },
+            onDismiss = { activeBuyNowItem = null }
         )
     }
 
@@ -314,11 +343,12 @@ fun MarketplaceScreen(
 }
 
 @Composable
-fun MarketplaceItemCard(
+fun MarketplaceGridPartCard(
     item: MarketplaceItem,
     onToggleSave: () -> Unit,
     onContactSeller: () -> Unit,
     onVerifyFitment: () -> Unit,
+    onBuyNow: () -> Unit,
     onDelete: () -> Unit
 ) {
     val conditionColor = when (item.condition) {
@@ -328,103 +358,174 @@ fun MarketplaceItemCard(
         PartCondition.REFURBISHED -> VioletPurple
     }
 
+    val (categoryIcon, categoryBrush) = when (item.category.lowercase()) {
+        "exhaust" -> Pair(
+            Icons.Default.TwoWheeler,
+            Brush.horizontalGradient(listOf(Color(0xFFE65100), Color(0xFFFFB74D)))
+        )
+        "suspension" -> Pair(
+            Icons.Default.Build,
+            Brush.horizontalGradient(listOf(Color(0xFF00838F), Color(0xFF00E5FF)))
+        )
+        "brakes" -> Pair(
+            Icons.Default.Speed,
+            Brush.horizontalGradient(listOf(Color(0xFFB71C1C), Color(0xFFFF5252)))
+        )
+        "seat & materials" -> Pair(
+            Icons.Default.Handyman,
+            Brush.horizontalGradient(listOf(Color(0xFF4A148C), Color(0xFFAB47BC)))
+        )
+        else -> Pair(
+            Icons.Default.ShoppingBag,
+            Brush.horizontalGradient(listOf(Color(0xFF1B5E20), Color(0xFF66BB6A)))
+        )
+    }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark),
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, CardBorderDark, RoundedCornerShape(16.dp))
+            .testTag("part_grid_card_${item.id}")
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Column {
+            // Visual Part Banner Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(categoryBrush)
+                    .padding(8.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        BadgeChip(text = item.category, color = VioletPurple)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        BadgeChip(text = item.condition.name.replace("_", " "), color = conditionColor)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .padding(6.dp)
+                    ) {
+                        Icon(categoryIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            fontSize = 16.sp
+                    IconButton(
+                        onClick = onToggleSave,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                    ) {
+                        Icon(
+                            imageVector = if (item.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Save Part",
+                            tint = if (item.isSaved) AmberOrange else Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
-                    )
+                    }
                 }
 
-                IconButton(onClick = onToggleSave) {
-                    Icon(
-                        imageVector = if (item.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = "Save Part",
-                        tint = if (item.isSaved) AmberOrange else TextSecondary
+                // Price Badge at Bottom of Banner
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.75f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "$${String.format("%.2f", item.price)}",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = EmeraldGreen,
+                        fontSize = 13.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            // Part Details
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BadgeChip(text = item.condition.name.replace("_", " "), color = conditionColor)
+                    BadgeChip(text = item.category, color = VioletPurple)
+                }
 
-            Text(
-                text = "Fitment: ${item.fitment}",
-                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontWeight = FontWeight.SemiBold)
-            )
+                Spacer(modifier = Modifier.height(6.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = item.description,
-                style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 12.sp),
-                maxLines = 3
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = "$${String.format("%.2f", item.price)}",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = AmberOrange,
-                        fontSize = 20.sp
-                    )
+                    text = item.title,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Fitment: ${item.fitment}",
+                    color = TextSecondary,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Buy Now Action Button (Primary)
+                Button(
+                    onClick = onBuyNow,
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("buy_now_grid_btn_${item.id}")
+                ) {
+                    Icon(Icons.Default.Payment, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("BUY NOW", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Secondary Action Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedButton(
                         onClick = onVerifyFitment,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("btn_verify_fitment_card")
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = TechCyan, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Verify Fitment", color = TechCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = TechCyan, modifier = Modifier.size(12.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text("Fitment", color = TechCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(
+                        onClick = onContactSeller,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = "Contact Seller", tint = AmberOrange, modifier = Modifier.size(16.dp))
                     }
 
                     if (item.isUserListing) {
-                        IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Listing", tint = CrimsonRed)
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Listing", tint = CrimsonRed, modifier = Modifier.size(16.dp))
                         }
-                    }
-
-                    Button(
-                        onClick = onContactSeller,
-                        colors = ButtonDefaults.buttonColors(containerColor = CardBorderDark),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Contact", color = TextPrimary, fontSize = 12.sp)
                     }
                 }
             }

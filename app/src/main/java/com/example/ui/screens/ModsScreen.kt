@@ -55,7 +55,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.entities.ModCategory
 import com.example.data.entities.ModStatus
 import com.example.data.entities.Modification
+import com.example.data.entities.Motorcycle
 import com.example.ui.components.BadgeChip
+import com.example.ui.components.PartCompatibilitySearchCard
+import com.example.ui.components.PartCompatibilitySearchDialog
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CardBorderDark
 import com.example.ui.theme.CardDark
@@ -70,12 +73,16 @@ import com.example.ui.theme.VioletPurple
 @Composable
 fun ModsScreen(
     modifications: List<Modification>,
+    motorcycle: Motorcycle? = null,
     onAddModClicked: () -> Unit,
     onUpdateStatus: (Modification, ModStatus) -> Unit,
     onDeleteMod: (Modification) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedCategoryFilter by remember { mutableStateOf<ModCategory?>(null) }
+    var selectedModForCompatCheck by remember { mutableStateOf<Modification?>(null) }
+
+    val defaultBikeName = motorcycle?.let { "${it.year} ${it.name} ${it.model}".trim() } ?: "Yamaha MT-09 2023"
 
     val filteredMods = if (selectedCategoryFilter == null) {
         modifications
@@ -134,6 +141,11 @@ fun ModsScreen(
                         )
                     }
                 }
+            }
+
+            // Google Part Fitment Check Tool
+            item {
+                PartCompatibilitySearchCard(defaultBikeModel = defaultBikeName)
             }
 
             // Overview Banner
@@ -213,6 +225,7 @@ fun ModsScreen(
                     ModCardItem(
                         mod = mod,
                         onUpdateStatus = { newStatus -> onUpdateStatus(mod, newStatus) },
+                        onVerifyFitment = { selectedModForCompatCheck = mod },
                         onDelete = { onDeleteMod(mod) }
                     )
                 }
@@ -220,6 +233,14 @@ fun ModsScreen(
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+    }
+
+    selectedModForCompatCheck?.let { mod ->
+        PartCompatibilitySearchDialog(
+            bikeModel = defaultBikeName,
+            partName = "${mod.brand} ${mod.title}",
+            onDismiss = { selectedModForCompatCheck = null }
+        )
     }
 }
 
@@ -275,6 +296,7 @@ fun GainStatItem(
 fun ModCardItem(
     mod: Modification,
     onUpdateStatus: (ModStatus) -> Unit,
+    onVerifyFitment: () -> Unit,
     onDelete: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -355,6 +377,13 @@ fun ModCardItem(
                             text = { Text("Mark Planned", color = AmberOrange) },
                             onClick = {
                                 onUpdateStatus(ModStatus.PLANNED)
+                                menuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Verify Google Fitment", color = TechCyan) },
+                            onClick = {
+                                onVerifyFitment()
                                 menuExpanded = false
                             }
                         )

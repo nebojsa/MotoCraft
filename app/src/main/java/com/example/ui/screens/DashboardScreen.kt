@@ -48,8 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.entities.BuildProject
+import com.example.data.entities.MaintenanceRecord
+import com.example.data.entities.Modification
 import com.example.data.entities.Motorcycle
 import com.example.ui.components.BadgeChip
+import com.example.ui.components.InteractiveDashboardAnalytics
 import com.example.ui.components.ProgressBarWithLabel
 import com.example.ui.components.StatCard
 import com.example.ui.theme.AmberOrange
@@ -69,6 +72,8 @@ fun DashboardScreen(
     motorcycle: Motorcycle?,
     stats: BuildBudgetStats,
     buildProjects: List<BuildProject>,
+    maintenanceRecords: List<MaintenanceRecord> = emptyList(),
+    modifications: List<Modification> = emptyList(),
     onAddProjectClicked: () -> Unit,
     onAddModClicked: () -> Unit,
     modifier: Modifier = Modifier
@@ -216,6 +221,15 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+
+        // Interactive Visual Analytics (Maintenance Trends & Budget Consumption)
+        item {
+            InteractiveDashboardAnalytics(
+                maintenanceRecords = maintenanceRecords,
+                modifications = modifications,
+                stats = stats
+            )
         }
 
         // Budget Spending Dashboard

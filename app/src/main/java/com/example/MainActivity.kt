@@ -115,12 +115,15 @@ fun MotoAppContent(viewModel: MotoViewModel) {
                     motorcycle = selectedBike,
                     stats = budgetStats,
                     buildProjects = buildProjects,
+                    maintenanceRecords = maintenanceRecords,
+                    modifications = mods,
                     onAddProjectClicked = { showAddProjectDialog = true },
                     onAddModClicked = { showAddModDialog = true }
                 )
 
                 NavTab.MODS -> ModsScreen(
                     modifications = mods,
+                    motorcycle = selectedBike,
                     onAddModClicked = { showAddModDialog = true },
                     onUpdateStatus = { mod, newStatus -> viewModel.updateModStatus(mod, newStatus) },
                     onDeleteMod = { mod -> viewModel.deleteModification(mod) }
@@ -128,6 +131,7 @@ fun MotoAppContent(viewModel: MotoViewModel) {
 
                 NavTab.MARKETPLACE -> MarketplaceScreen(
                     items = marketplaceItems,
+                    motorcycle = selectedBike,
                     onAddListingClicked = { showAddListingDialog = true },
                     onToggleSave = { item -> viewModel.toggleSaveItem(item) },
                     onDeleteItem = { item -> viewModel.deleteMarketplaceItem(item) }

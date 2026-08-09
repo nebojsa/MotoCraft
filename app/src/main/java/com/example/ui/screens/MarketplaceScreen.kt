@@ -38,6 +38,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -62,8 +63,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entities.MarketplaceItem
+import com.example.data.entities.Motorcycle
 import com.example.data.entities.PartCondition
 import com.example.ui.components.BadgeChip
+import com.example.ui.components.PartCompatibilitySearchCard
+import com.example.ui.components.PartCompatibilitySearchDialog
+import com.example.ui.components.launchGoogleSearch
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CardBorderDark
 import com.example.ui.theme.CardDark
@@ -79,6 +84,7 @@ import com.example.ui.theme.VioletPurple
 @Composable
 fun MarketplaceScreen(
     items: List<MarketplaceItem>,
+    motorcycle: Motorcycle? = null,
     onAddListingClicked: () -> Unit,
     onToggleSave: (MarketplaceItem) -> Unit,
     onDeleteItem: (MarketplaceItem) -> Unit,
@@ -88,6 +94,9 @@ fun MarketplaceScreen(
     var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = All, 1 = Saved, 2 = My Listings
     var activeContactSellerItem by remember { mutableStateOf<MarketplaceItem?>(null) }
+    var activeCompatibilityCheckItem by remember { mutableStateOf<MarketplaceItem?>(null) }
+
+    val defaultBikeName = motorcycle?.let { "${it.year} ${it.name} ${it.model}".trim() } ?: "Yamaha MT-09 2023"
 
     val categories = listOf("Exhaust", "Suspension", "Brakes", "Seat & Materials", "ECU & Tuners")
 
@@ -130,7 +139,7 @@ fun MarketplaceScreen(
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Search Bar
+            // Search Bar & Fitment Verifier
             item {
                 OutlinedTextField(
                     value = searchQuery,
@@ -149,6 +158,11 @@ fun MarketplaceScreen(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth().testTag("marketplace_search_input")
                 )
+            }
+
+            // Google Part Compatibility Search Card
+            item {
+                PartCompatibilitySearchCard(defaultBikeModel = defaultBikeName)
             }
 
             // Tabs Row
@@ -227,6 +241,7 @@ fun MarketplaceScreen(
                         item = item,
                         onToggleSave = { onToggleSave(item) },
                         onContactSeller = { activeContactSellerItem = item },
+                        onVerifyFitment = { activeCompatibilityCheckItem = item },
                         onDelete = { onDeleteItem(item) }
                     )
                 }
@@ -234,6 +249,15 @@ fun MarketplaceScreen(
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+    }
+
+    // Google Part Fitment Check Dialog
+    activeCompatibilityCheckItem?.let { item ->
+        PartCompatibilitySearchDialog(
+            bikeModel = defaultBikeName,
+            partName = "${item.title} (${item.fitment})",
+            onDismiss = { activeCompatibilityCheckItem = null }
+        )
     }
 
     // Contact Seller Dialog
@@ -294,6 +318,7 @@ fun MarketplaceItemCard(
     item: MarketplaceItem,
     onToggleSave: () -> Unit,
     onContactSeller: () -> Unit,
+    onVerifyFitment: () -> Unit,
     onDelete: () -> Unit
 ) {
     val conditionColor = when (item.condition) {
@@ -375,12 +400,23 @@ fun MarketplaceItemCard(
                     )
                 )
 
-                Row {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        onClick = onVerifyFitment,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("btn_verify_fitment_card")
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = TechCyan, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Verify Fitment", color = TechCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
                     if (item.isUserListing) {
                         IconButton(onClick = onDelete) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Listing", tint = CrimsonRed)
                         }
                     }
+
                     Button(
                         onClick = onContactSeller,
                         colors = ButtonDefaults.buttonColors(containerColor = CardBorderDark),
@@ -388,7 +424,7 @@ fun MarketplaceItemCard(
                     ) {
                         Icon(Icons.Default.Person, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Contact Seller", color = TextPrimary, fontSize = 12.sp)
+                        Text("Contact", color = TextPrimary, fontSize = 12.sp)
                     }
                 }
             }

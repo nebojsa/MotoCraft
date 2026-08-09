@@ -1,5 +1,7 @@
 package com.example.util
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Share
@@ -39,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -126,9 +131,131 @@ data class ServiceInvoice(
         }
         return sb.toString()
     }
+
+    fun generateHtmlInvoice(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Invoice $invoiceNumber - ${companyDetails.companyName}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f1419; color: #e7e9ea; margin: 0; padding: 20px; }
+                    .invoice-container { max-width: 720px; margin: 0 auto; background-color: #161e27; border: 1px solid #2f3336; border-radius: 12px; padding: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #ff9800; padding-bottom: 20px; margin-bottom: 24px; }
+                    .company-name { font-size: 24px; font-weight: 800; color: #ff9800; letter-spacing: -0.5px; }
+                    .company-info { font-size: 13px; color: #8b98a5; margin-top: 4px; line-height: 1.5; }
+                    .badge { display: inline-block; background-color: #ff980022; color: #ff9800; border: 1px solid #ff9800; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; }
+                    .inv-number { font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 6px; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background-color: #1c2732; padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #2f3336; }
+                    .label { font-size: 11px; text-transform: uppercase; color: #8b98a5; font-weight: 700; letter-spacing: 0.5px; }
+                    .value { font-size: 14px; font-weight: 600; color: #ffffff; margin-top: 2px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+                    th { background-color: #253341; color: #ff9800; font-size: 12px; text-transform: uppercase; text-align: left; padding: 12px; font-weight: 700; }
+                    td { padding: 14px 12px; border-bottom: 1px solid #2f3336; font-size: 14px; color: #e7e9ea; }
+                    .totals-container { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+                    .totals-box { width: 280px; }
+                    .total-row { display: flex; justify-content: space-between; font-size: 14px; color: #8b98a5; padding: 4px 0; }
+                    .grand-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; color: #00e676; border-top: 2px solid #00e676; padding-top: 10px; margin-top: 8px; }
+                    .notes-card { background-color: #1c2732; border-left: 4px solid #ff9800; padding: 14px; border-radius: 4px; font-size: 13px; color: #8b98a5; line-height: 1.5; }
+                    .footer { text-align: center; margin-top: 32px; font-size: 12px; color: #6e767d; }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <div class="header">
+                        <div>
+                            <div class="company-name">${companyDetails.companyName}</div>
+                            <div class="company-info">Tax ID: ${companyDetails.taxId}</div>
+                            <div class="company-info">${companyDetails.address}</div>
+                            <div class="company-info">${companyDetails.phone} &bull; ${companyDetails.email}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge">Official Invoice</span>
+                            <div class="inv-number"># $invoiceNumber</div>
+                            <div class="company-info">Date: ${dateFormat.format(Date(date))}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div>
+                            <div class="label">Customer / Rider</div>
+                            <div class="value">$customerName</div>
+                        </div>
+                        <div>
+                            <div class="label">Motorcycle & Mileage</div>
+                            <div class="value">$bikeName ${if (mileageKm > 0) "($mileageKm km)" else ""}</div>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th style="text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.mapIndexed { index, item -> """
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${item.description}</td>
+                                    <td>${item.quantity}</td>
+                                    <td>$${String.format("%.2f", item.unitPrice)}</td>
+                                    <td style="text-align: right;">$${String.format("%.2f", item.totalAmount)}</td>
+                                </tr>
+                            """.trimIndent() }.joinToString("\n")}
+                        </tbody>
+                    </table>
+
+                    <div class="totals-container">
+                        <div class="totals-box">
+                            <div class="total-row"><span>Subtotal</span><span>$${String.format("%.2f", subtotal)}</span></div>
+                            <div class="total-row"><span>Tax (${taxRatePercent}%)</span><span>$${String.format("%.2f", taxAmount)}</span></div>
+                            <div class="grand-total"><span>Grand Total</span><span>$${String.format("%.2f", grandTotal)}</span></div>
+                        </div>
+                    </div>
+
+                    ${if (notes.isNotBlank()) """<div class="notes-card"><strong>Notes & Terms:</strong> $notes</div>""" else ""}
+
+                    <div class="footer">
+                        Generated via MotoCraft Workshop System &bull; Thank you for your business!
+                    </div>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
 }
 
 object InvoiceGenerator {
+
+    fun shareInvoiceDocument(context: Context, invoice: ServiceInvoice) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_SUBJECT, "Workshop Invoice ${invoice.invoiceNumber} - ${invoice.bikeName}")
+            putExtra(Intent.EXTRA_TEXT, invoice.generatePlainTextInvoice())
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share Invoice Document")
+        context.startActivity(shareIntent)
+    }
+
+    fun shareInvoiceHtml(context: Context, invoice: ServiceInvoice) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_SUBJECT, "Workshop Invoice ${invoice.invoiceNumber} (HTML)")
+            putExtra(Intent.EXTRA_TEXT, invoice.generateHtmlInvoice())
+            type = "text/html"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "Share HTML Invoice Document")
+        context.startActivity(shareIntent)
+    }
 
     fun createFromMaintenanceLog(
         record: MaintenanceRecord,
@@ -207,6 +334,7 @@ fun InvoiceGeneratorDialog(
     bikeName: String,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
     var companyName by remember { mutableStateOf("MotoCraft Custom Workshop LLC") }
@@ -223,6 +351,7 @@ fun InvoiceGeneratorDialog(
     var notesStr by remember { mutableStateOf("All torques set to OEM specifications. Certified road test complete.") }
 
     var isCompanyEditExpanded by remember { mutableStateOf(false) }
+    var exportFormatIsHtml by remember { mutableStateOf(false) }
     var invoiceCopiedNotification by remember { mutableStateOf(false) }
 
     val taxRate = taxRateStr.toDoubleOrNull() ?: 8.5
@@ -320,7 +449,7 @@ fun InvoiceGeneratorDialog(
 
                 StyledTextField(value = notesStr, onValueChange = { notesStr = it }, label = "Invoice Footer Notes / Terms", tag = "inv_notes")
 
-                // Section 3: Live Formatted Invoice Preview
+                // Section 3: Live Formatted Invoice Preview & Export Options
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF12161A)),
@@ -332,14 +461,24 @@ fun InvoiceGeneratorDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("LIVE INVOICE PREVIEW", color = AmberOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("PREVIEW FORMAT: ", color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                TextButton(
+                                    onClick = { exportFormatIsHtml = !exportFormatIsHtml },
+                                    modifier = Modifier.testTag("toggle_format_btn")
+                                ) {
+                                    Icon(if (exportFormatIsHtml) Icons.Default.Code else Icons.Default.Description, contentDescription = null, tint = AmberOrange, modifier = Modifier.padding(end = 4.dp))
+                                    Text(if (exportFormatIsHtml) "HTML Document" else "Plain Text", color = AmberOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+
                             Text("Total: $${String.format("%.2f", currentInvoice.grandTotal)}", color = EmeraldGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
 
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = currentInvoice.generatePlainTextInvoice(),
+                            text = if (exportFormatIsHtml) currentInvoice.generateHtmlInvoice() else currentInvoice.generatePlainTextInvoice(),
                             color = TextSecondary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
@@ -350,7 +489,7 @@ fun InvoiceGeneratorDialog(
 
                 if (invoiceCopiedNotification) {
                     Text(
-                        text = "✓ Formatted Invoice copied to Clipboard!",
+                        text = "✓ Document copied to Clipboard!",
                         color = EmeraldGreen,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
@@ -360,18 +499,35 @@ fun InvoiceGeneratorDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val fullText = currentInvoice.generatePlainTextInvoice()
-                    clipboardManager.setText(AnnotatedString(fullText))
-                    invoiceCopiedNotification = true
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = AmberOrange),
-                modifier = Modifier.testTag("copy_invoice_btn")
-            ) {
-                Icon(Icons.Default.Share, contentDescription = null, tint = Color.Black)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Copy & Export Invoice", color = Color.Black, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        val textToCopy = if (exportFormatIsHtml) currentInvoice.generateHtmlInvoice() else currentInvoice.generatePlainTextInvoice()
+                        clipboardManager.setText(AnnotatedString(textToCopy))
+                        invoiceCopiedNotification = true
+                    },
+                    modifier = Modifier.testTag("copy_invoice_btn")
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextPrimary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Copy", color = TextPrimary)
+                }
+
+                Button(
+                    onClick = {
+                        if (exportFormatIsHtml) {
+                            InvoiceGenerator.shareInvoiceHtml(context, currentInvoice)
+                        } else {
+                            InvoiceGenerator.shareInvoiceDocument(context, currentInvoice)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AmberOrange),
+                    modifier = Modifier.testTag("share_invoice_doc_btn")
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, tint = Color.Black)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Share Doc", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
             }
         },
         dismissButton = {

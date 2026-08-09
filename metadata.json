@@ -1,0 +1,6 @@
+{
+  "name": "MotoCraft",
+  "description": "SaaS platform for motorcycle modifications, performance upgrades, parts marketplace, maintenance log, seat material manager, and custom build budget dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

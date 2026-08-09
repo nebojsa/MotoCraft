@@ -78,7 +78,7 @@ import com.example.ui.viewmodel.SeatCalculatorResult
 @Composable
 fun SeatCraftScreen(
     materials: List<SeatMaterial>,
-    onCalculateSpec: (Double, Double, Double, String) -> SeatCalculatorResult,
+    onCalculateSpec: (bikerHeightCm: Double, bikerWeightKg: Double, bikerInseamCm: Double, ridingPosture: String, seatLengthCm: Double, seatWidthCm: Double) -> SeatCalculatorResult,
     onAddMaterialClicked: () -> Unit,
     onAdjustQuantity: (SeatMaterial, Double) -> Unit,
     onDeleteMaterial: (SeatMaterial) -> Unit,
@@ -86,14 +86,16 @@ fun SeatCraftScreen(
 ) {
     var selectedTypeFilter by remember { mutableStateOf<MaterialType?>(null) }
 
-    // Calculator parameters state
-    var riderWeightKg by remember { mutableStateOf(85.0) }
+    // Biker Ergonomics & Seat Script Input Parameters
+    var bikerHeightCm by remember { mutableStateOf(175.0) }
+    var bikerWeightKg by remember { mutableStateOf(85.0) }
+    var bikerInseamCm by remember { mutableStateOf(80.0) }
+    var ridingStyle by remember { mutableStateOf("Touring / Adventure") }
     var seatLengthCm by remember { mutableStateOf(55.0) }
     var seatWidthCm by remember { mutableStateOf(28.0) }
-    var ridingStyle by remember { mutableStateOf("Touring / Adventure") }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    val calcResult = onCalculateSpec(riderWeightKg, seatLengthCm, seatWidthCm, ridingStyle)
+    val calcResult = onCalculateSpec(bikerHeightCm, bikerWeightKg, bikerInseamCm, ridingStyle, seatLengthCm, seatWidthCm)
 
     val filteredMaterials = if (selectedTypeFilter == null) {
         materials
@@ -167,10 +169,10 @@ fun SeatCraftScreen(
                                 .align(Alignment.BottomStart)
                                 .padding(16.dp)
                         ) {
-                            BadgeChip(text = "Seat Repair & Restructuring", color = AmberOrange)
+                            BadgeChip(text = "Seat Material Manager & Ergonomics", color = AmberOrange)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Saddle Ergonomics & Materials",
+                                text = "Biker Ergonomics & Saddle Workshop",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
@@ -178,7 +180,7 @@ fun SeatCraftScreen(
                                 )
                             )
                             Text(
-                                text = "Custom Gel, High-Density Foam & Leather Inventory",
+                                text = "Custom Materials, Textures, Color Options & Room DB Inventory",
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
                             )
                         }
@@ -186,7 +188,7 @@ fun SeatCraftScreen(
                 }
             }
 
-            // SEAT RESTRUCTURING SPEC CALCULATOR TOOL
+            // BIKER ERGONOMICS & SEAT MAKING SCRIPT CALCULATOR
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -200,7 +202,7 @@ fun SeatCraftScreen(
                             Icon(Icons.Default.Handyman, contentDescription = null, tint = AmberOrange)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "SEAT RESTRUCTURING PLANNER",
+                                text = "BIKER ERGONOMICS & SEAT CRAFT SCRIPT",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextSecondary,
@@ -211,7 +213,7 @@ fun SeatCraftScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Riding Style Selector
+                        // Riding Posture / Style Selector
                         Box {
                             OutlinedButton(
                                 onClick = { dropdownExpanded = true },
@@ -223,7 +225,7 @@ fun SeatCraftScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Ride Style: $ridingStyle", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    Text(text = "Riding Posture: $ridingStyle", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                     Text(text = "Change", color = AmberOrange, fontSize = 12.sp)
                                 }
                             }
@@ -233,7 +235,7 @@ fun SeatCraftScreen(
                                 onDismissRequest = { dropdownExpanded = false },
                                 modifier = Modifier.background(CardDark)
                             ) {
-                                listOf("Sport / Track", "Touring / Adventure", "Cafe Racer / Custom").forEach { style ->
+                                listOf("Touring / Adventure", "Sport / Track", "Upright Cruiser / Chopper", "Cafe Racer / Custom").forEach { style ->
                                     DropdownMenuItem(
                                         text = { Text(style, color = TextPrimary) },
                                         onClick = {
@@ -247,22 +249,47 @@ fun SeatCraftScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Rider Weight Slider
+                        // Biker Height Slider
+                        val heightFeet = (bikerHeightCm / 30.48).toInt()
+                        val heightInches = ((bikerHeightCm % 30.48) / 2.54).toInt()
                         Text(
-                            text = "Rider Weight: ${riderWeightKg.toInt()} kg",
+                            text = "Biker Height: ${bikerHeightCm.toInt()} cm ($heightFeet'$heightInches\")",
                             style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold)
                         )
                         Slider(
-                            value = riderWeightKg.toFloat(),
-                            onValueChange = { riderWeightKg = it.toDouble() },
-                            valueRange = 50f..130f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = AmberOrange,
-                                activeTrackColor = AmberOrange
-                            )
+                            value = bikerHeightCm.toFloat(),
+                            onValueChange = { bikerHeightCm = it.toDouble() },
+                            valueRange = 150f..205f,
+                            colors = SliderDefaults.colors(thumbColor = TechCyan, activeTrackColor = TechCyan)
                         )
 
-                        // Seat Length Slider
+                        // Biker Weight Slider
+                        val weightLbs = (bikerWeightKg * 2.20462).toInt()
+                        Text(
+                            text = "Biker Weight: ${bikerWeightKg.toInt()} kg ($weightLbs lbs)",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                        )
+                        Slider(
+                            value = bikerWeightKg.toFloat(),
+                            onValueChange = { bikerWeightKg = it.toDouble() },
+                            valueRange = 50f..140f,
+                            colors = SliderDefaults.colors(thumbColor = AmberOrange, activeTrackColor = AmberOrange)
+                        )
+
+                        // Biker Inseam Slider
+                        val inseamInches = (bikerInseamCm / 2.54).toInt()
+                        Text(
+                            text = "Biker Inseam: ${bikerInseamCm.toInt()} cm ($inseamInches in)",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                        )
+                        Slider(
+                            value = bikerInseamCm.toFloat(),
+                            onValueChange = { bikerInseamCm = it.toDouble() },
+                            valueRange = 65f..100f,
+                            colors = SliderDefaults.colors(thumbColor = VioletPurple, activeTrackColor = VioletPurple)
+                        )
+
+                        // Seat Length & Width Sliders
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -274,7 +301,7 @@ fun SeatCraftScreen(
                             value = seatLengthCm.toFloat(),
                             onValueChange = { seatLengthCm = it.toDouble() },
                             valueRange = 30f..85f,
-                            colors = SliderDefaults.colors(thumbColor = TechCyan, activeTrackColor = TechCyan)
+                            colors = SliderDefaults.colors(thumbColor = EmeraldGreen, activeTrackColor = EmeraldGreen)
                         )
 
                         // Generated Spec Output Box
@@ -288,7 +315,7 @@ fun SeatCraftScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "CALCULATED RESTRUCTURE SPECIFICATIONS",
+                                    text = "PERSONALIZED SEAT SPECIFICATIONS",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = AmberOrange,
@@ -296,11 +323,29 @@ fun SeatCraftScreen(
                                     )
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
+
                                 Text(
-                                    text = "Ergonomic Spec: ${calcResult.estimatedComfortRating}",
+                                    text = "Comfort Profile: ${calcResult.estimatedComfortRating}",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary)
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Height/Ground Reach: ${calcResult.recommendedSeatHeightOffset}",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = TechCyan)
+                                )
+                                Text(
+                                    text = "Contour Spec: ${calcResult.seatWidthSpec}",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                                )
+                                Text(
+                                    text = "Pressure Index: ${calcResult.pressureReliefIndex}",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = EmeraldGreen)
+                                )
+                                Text(
+                                    text = "Recommended Cover: ${calcResult.recommendedCoverTextureAndColor}",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = AmberOrange, fontWeight = FontWeight.SemiBold)
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
 
                                 calcResult.recommendedMaterials.forEach { rec ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -315,7 +360,7 @@ fun SeatCraftScreen(
                 }
             }
 
-            // MATERIALS INVENTORY SECTION HEADER
+            // SEAT MATERIAL MANAGER SECTION HEADER
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -324,7 +369,7 @@ fun SeatCraftScreen(
                 ) {
                     Column {
                         Text(
-                            text = "WORKSHOP MATERIALS INVENTORY",
+                            text = "SEAT MATERIAL MANAGER (ROOM DB)",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextSecondary,
@@ -339,7 +384,7 @@ fun SeatCraftScreen(
 
                     if (lowStockCount > 0) {
                         BadgeChip(
-                            text = "$lowStockCount LOW STOCK WARNING",
+                            text = "$lowStockCount LOW STOCK",
                             color = CrimsonRed
                         )
                     }
@@ -369,7 +414,7 @@ fun SeatCraftScreen(
             if (filteredMaterials.isEmpty()) {
                 item {
                     Text(
-                        text = "No seat materials in inventory.",
+                        text = "No seat materials in database inventory.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted,
                         modifier = Modifier.padding(vertical = 12.dp)
@@ -417,6 +462,11 @@ fun MaterialItemCard(
                             text = material.type.name.replace("_", " "),
                             color = VioletPurple
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        BadgeChip(
+                            text = material.texture,
+                            color = TechCyan
+                        )
                         if (isLowStock) {
                             Spacer(modifier = Modifier.width(6.dp))
                             BadgeChip(text = "LOW STOCK", color = CrimsonRed)
@@ -441,10 +491,21 @@ fun MaterialItemCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "Spec/Grade: ${material.colorOrGrade} • Dim: ${material.dimensions}",
-                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Color Option: ",
+                    style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 12.sp)
+                )
+                BadgeChip(
+                    text = material.colorOption.ifBlank { material.colorOrGrade.ifBlank { "Black" } },
+                    color = AmberOrange
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "• Dim: ${material.dimensions}",
+                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
+                )
+            }
 
             if (material.assignedProject.isNotBlank()) {
                 Text(

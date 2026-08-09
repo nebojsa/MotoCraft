@@ -141,8 +141,8 @@ fun MotoAppContent(viewModel: MotoViewModel) {
 
                 NavTab.SEAT_CRAFT -> SeatCraftScreen(
                     materials = seatMaterials,
-                    onCalculateSpec = { weight, length, width, style ->
-                        viewModel.calculateSeatRestructure(weight, length, width, style)
+                    onCalculateSpec = { height, weight, inseam, style, length, width ->
+                        viewModel.calculateSeatRestructure(height, weight, inseam, style, length, width)
                     },
                     onAddMaterialClicked = { showAddMaterialDialog = true },
                     onAdjustQuantity = { mat, delta -> viewModel.adjustMaterialQuantity(mat, delta) },
@@ -206,8 +206,8 @@ fun MotoAppContent(viewModel: MotoViewModel) {
     if (showAddMaterialDialog) {
         AddMaterialDialog(
             onDismiss = { showAddMaterialDialog = false },
-            onConfirm = { name, type, qty, unit, cost, color, reorder, dims, project ->
-                viewModel.addSeatMaterial(name, type, qty, unit, cost, color, reorder, dims, project)
+            onConfirm = { name, type, texture, colorOption, qty, unit, cost, color, reorder, dims, project ->
+                viewModel.addSeatMaterial(name, type, texture, colorOption, qty, unit, cost, color, reorder, dims, project)
                 showAddMaterialDialog = false
             }
         )

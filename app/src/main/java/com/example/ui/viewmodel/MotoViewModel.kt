@@ -37,11 +37,19 @@ data class BuildBudgetStats(
 )
 
 data class SeatCalculatorResult(
-    val baseFoamThicknessMm: Double,
-    val gelPadAreaSqCm: Double,
-    val coverMaterialSqFt: Double,
-    val estimatedComfortRating: String, // "Firm Sport", "Medium Dual-Sport", "Plush Touring"
-    val recommendedMaterials: List<String>
+    val bikerHeightCm: Double = 175.0,
+    val bikerWeightKg: Double = 85.0,
+    val bikerInseamCm: Double = 80.0,
+    val ridingPosture: String = "Touring / Adventure",
+    val baseFoamThicknessMm: Double = 40.0,
+    val gelPadAreaSqCm: Double = 300.0,
+    val coverMaterialSqFt: Double = 3.5,
+    val estimatedComfortRating: String = "Plush Long-Distance Ergonomics",
+    val recommendedSeatHeightOffset: String = "Standard height with tapered thigh relief",
+    val seatWidthSpec: String = "18cm Tapered Nose / 32cm Bucket",
+    val pressureReliefIndex: String = "Optimal (1.1 N/cm²)",
+    val recommendedCoverTextureAndColor: String = "Diamond Stitched Marine Vinyl in Espresso Brown",
+    val recommendedMaterials: List<String> = emptyList()
 )
 
 class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
@@ -298,23 +306,27 @@ class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
     fun addSeatMaterial(
         name: String,
         type: MaterialType,
+        texture: String = "Smooth Matte",
+        colorOption: String = "Jet Black",
         quantity: Double,
         unit: String,
         unitCost: Double,
-        color: String,
-        reorderLevel: Double,
-        dimensions: String,
-        project: String
+        color: String = "",
+        reorderLevel: Double = 2.0,
+        dimensions: String = "",
+        project: String = ""
     ) {
         viewModelScope.launch {
             repository.insertSeatMaterial(
                 SeatMaterial(
                     name = name,
                     type = type,
+                    texture = texture,
+                    colorOption = colorOption,
                     quantityOnHand = quantity,
                     unit = unit,
                     unitCost = unitCost,
-                    colorOrGrade = color,
+                    colorOrGrade = if (color.isNotBlank()) color else colorOption,
                     reorderLevel = reorderLevel,
                     dimensions = dimensions,
                     assignedProject = project
@@ -353,42 +365,72 @@ class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
         }
     }
 
-    // Calculator Utility for Seat Restructuring
+    // Script & Calculator Utility for Biker Ergonomics & Seat Restructuring
     fun calculateSeatRestructure(
-        riderWeightKg: Double,
-        seatLengthCm: Double,
-        seatWidthCm: Double,
-        rideType: String // "Sport / Track", "Touring / Adventure", "Cafe Racer / Custom"
+        bikerHeightCm: Double = 175.0,
+        bikerWeightKg: Double = 85.0,
+        bikerInseamCm: Double = 80.0,
+        rideType: String = "Touring / Adventure", // "Sport / Track", "Touring / Adventure", "Upright Cruiser / Chopper", "Cafe Racer / Custom"
+        seatLengthCm: Double = 55.0,
+        seatWidthCm: Double = 28.0
     ): SeatCalculatorResult {
         val baseFoam = when {
-            riderWeightKg > 90 -> 50.0
-            riderWeightKg > 75 -> 40.0
-            else -> 30.0
+            bikerWeightKg > 100 -> 55.0
+            bikerWeightKg > 85 -> 45.0
+            bikerWeightKg > 70 -> 35.0
+            else -> 25.0
         }
-        val gelArea = (seatLengthCm * 0.6) * (seatWidthCm * 0.8)
-        val coverSqFt = ((seatLengthCm + 15) * (seatWidthCm + 15)) / 929.03
 
-        val rating = when (rideType) {
-            "Sport / Track" -> "Firm High Density (75-80 Density Base)"
-            "Touring / Adventure" -> "Dual-Layer Memory Foam + 25mm Gel Pad"
-            else -> "Classic Tuck & Roll with 30mm Medium Foam"
+        // Height & Inseam Reach Analysis Script
+        val seatHeightOffset = when {
+            bikerInseamCm < 75.0 -> "-18 mm (Dished front nose & narrow thigh taper for 100% foot grounding)"
+            bikerInseamCm < 82.0 -> "Standard Seat Height (-5 mm front taper for effortless stop-and-go)"
+            bikerInseamCm > 88.0 -> "+25 mm Tall Riser Foam (+15mm rear pocket setback for leg comfort)"
+            else -> "Standard OEM Height (+5 mm cushion lift)"
+        }
+
+        // Pressure relief calculation
+        val seatAreaSqCm = seatLengthCm * seatWidthCm
+        val pressureNPerSqCm = (bikerWeightKg * 9.81) / (seatAreaSqCm * 0.45)
+        val pressureReliefRating = if (pressureNPerSqCm < 1.0) "Ultra-Light Pressure (0.85 N/cm²)" else "Optimized Pressure Distribution (${String.format("%.2f", pressureNPerSqCm)} N/cm²)"
+
+        val noseWidth = (seatWidthCm * 0.55).toInt()
+        val bucketWidth = seatWidthCm.toInt()
+        val widthSpec = "$noseWidth cm Tapered Nose / $bucketWidth cm Seating Bucket"
+
+        val gelArea = (seatLengthCm * 0.55) * (seatWidthCm * 0.7)
+        val coverSqFt = ((seatLengthCm + 16) * (seatWidthCm + 16)) / 929.03
+
+        val (coverTextureColor, comfortRating) = when (rideType) {
+            "Sport / Track" -> "Perforated High-Grip Vinyl in Jet Black" to "Firm High-Grip Feedback (80 Density Base)"
+            "Upright Cruiser / Chopper" -> "Tuck & Roll Vintage Leather in Cognac Brown" to "Classic Plush Cruiser Cushion"
+            "Cafe Racer / Custom" -> "Diamond Stitched Alcantara in Espresso Brown" to "Firm Custom Contour with Tail Roll"
+            else -> "Diamond Tuck Marine Vinyl in Jet Black / Espresso" to "Plush Long-Distance Touring Ergonomics"
         }
 
         val recs = mutableListOf<String>()
-        recs.add("${baseFoam.toInt()}mm High-Density Base Foam Layer")
-        recs.add("Anatomical Tailbone Pressure Relief Channel")
-        if (rideType.contains("Touring")) {
-            recs.add("Medical Grade 25mm Gel Insert (${gelArea.toInt()} cm² area)")
-            recs.add("20mm Visco Memory Foam Cushion Overlay")
+        recs.add("${baseFoam.toInt()}mm 80-Density Rebound Polyurethane Base")
+        recs.add("Anatomical Coccyx & Prostate Pressure Relief Groove")
+        if (bikerWeightKg > 80 || rideType.contains("Touring")) {
+            recs.add("Medical Grade 20mm Visco-Gel Insert (~${gelArea.toInt()} cm² area)")
+            recs.add("15mm High-Density Memory Foam Topper")
         }
-        recs.add("Heavy Duty Waterproof Liner Shield")
-        recs.add("UV & Abrasion Resistant Marine Grade Vinyl / Leather Cover (~${String.format("%.2f", coverSqFt)} sq ft)")
+        recs.add("Waterproof TPU Barrier Liner Shield")
+        recs.add("$coverTextureColor (~${String.format("%.2f", coverSqFt)} sq ft)")
 
         return SeatCalculatorResult(
+            bikerHeightCm = bikerHeightCm,
+            bikerWeightKg = bikerWeightKg,
+            bikerInseamCm = bikerInseamCm,
+            ridingPosture = rideType,
             baseFoamThicknessMm = baseFoam,
             gelPadAreaSqCm = gelArea,
             coverMaterialSqFt = coverSqFt,
-            estimatedComfortRating = rating,
+            estimatedComfortRating = comfortRating,
+            recommendedSeatHeightOffset = seatHeightOffset,
+            seatWidthSpec = widthSpec,
+            pressureReliefIndex = pressureReliefRating,
+            recommendedCoverTextureAndColor = coverTextureColor,
             recommendedMaterials = recs
         )
     }

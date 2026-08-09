@@ -346,23 +346,25 @@ fun AddReminderDialog(
 @Composable
 fun AddMaterialDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, type: MaterialType, quantity: Double, unit: String, unitCost: Double, color: String, reorderLevel: Double, dimensions: String, project: String) -> Unit
+    onConfirm: (name: String, type: MaterialType, texture: String, colorOption: String, quantity: Double, unit: String, unitCost: Double, color: String, reorderLevel: Double, dimensions: String, project: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf(MaterialType.HIGH_DENSITY_FOAM) }
+    var type by remember { mutableStateOf(MaterialType.MARINE_VINYL) }
     var typeDropdown by remember { mutableStateOf(false) }
+    var texture by remember { mutableStateOf("Diamond Tuck & Roll") }
+    var colorOption by remember { mutableStateOf("Espresso Brown") }
     var qtyStr by remember { mutableStateOf("5") }
-    var unit by remember { mutableStateOf("slabs") }
-    var costStr by remember { mutableStateOf("30") }
-    var color by remember { mutableStateOf("Black") }
+    var unit by remember { mutableStateOf("sq ft") }
+    var costStr by remember { mutableStateOf("25") }
+    var color by remember { mutableStateOf("") }
     var reorderStr by remember { mutableStateOf("2") }
-    var dimensions by remember { mutableStateOf("50cm x 40cm x 30mm") }
-    var project by remember { mutableStateOf("") }
+    var dimensions by remember { mutableStateOf("1.2m x 0.8m") }
+    var project by remember { mutableStateOf("Custom Build") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = CardDark,
-        title = { Text("Add Seat Workshop Material", color = TextPrimary, fontWeight = FontWeight.Bold) },
+        title = { Text("Add Seat Cover / Workshop Material", color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -370,7 +372,7 @@ fun AddMaterialDialog(
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StyledTextField(value = name, onValueChange = { name = it }, label = "Material Name", tag = "input_mat_name")
+                StyledTextField(value = name, onValueChange = { name = it }, label = "Material Name (e.g. Diamond Stitched Leather)", tag = "input_mat_name")
 
                 // Type selector
                 Text(text = "Type: ${type.name.replace("_", " ")}", color = TextSecondary)
@@ -379,7 +381,7 @@ fun AddMaterialDialog(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Select Material Type", color = AmberOrange)
+                    Text("Type: ${type.name.replace("_", " ")}", color = AmberOrange)
                 }
                 DropdownMenu(expanded = typeDropdown, onDismissRequest = { typeDropdown = false }) {
                     MaterialType.values().forEach { t ->
@@ -393,9 +395,12 @@ fun AddMaterialDialog(
                     }
                 }
 
+                StyledTextField(value = texture, onValueChange = { texture = it }, label = "Texture / Grain (e.g. Diamond Tuck, Perforated, Smooth)", tag = "input_mat_texture")
+                StyledTextField(value = colorOption, onValueChange = { colorOption = it }, label = "Color Option (e.g. Jet Black, Espresso, Cognac, Red)", tag = "input_mat_color_opt")
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StyledTextField(value = qtyStr, onValueChange = { qtyStr = it }, label = "Quantity", keyboardType = KeyboardType.Number, modifier = Modifier.weight(1f), tag = "input_mat_qty")
-                    StyledTextField(value = unit, onValueChange = { unit = it }, label = "Unit (slabs, sq ft, cans)", modifier = Modifier.weight(1f), tag = "input_mat_unit")
+                    StyledTextField(value = unit, onValueChange = { unit = it }, label = "Unit (sq ft, slabs, rolls)", modifier = Modifier.weight(1f), tag = "input_mat_unit")
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -403,9 +408,8 @@ fun AddMaterialDialog(
                     StyledTextField(value = reorderStr, onValueChange = { reorderStr = it }, label = "Reorder Threshold", keyboardType = KeyboardType.Number, modifier = Modifier.weight(1f), tag = "input_mat_reorder")
                 }
 
-                StyledTextField(value = color, onValueChange = { color = it }, label = "Color / Spec Grade", tag = "input_mat_color")
                 StyledTextField(value = dimensions, onValueChange = { dimensions = it }, label = "Dimensions / Size", tag = "input_mat_dim")
-                StyledTextField(value = project, onValueChange = { project = it }, label = "Assigned Custom Project", tag = "input_mat_project")
+                StyledTextField(value = project, onValueChange = { project = it }, label = "Assigned Build Project", tag = "input_mat_project")
             }
         },
         confirmButton = {
@@ -415,6 +419,8 @@ fun AddMaterialDialog(
                         onConfirm(
                             name,
                             type,
+                            texture,
+                            colorOption,
                             qtyStr.toDoubleOrNull() ?: 1.0,
                             unit,
                             costStr.toDoubleOrNull() ?: 10.0,
@@ -428,7 +434,7 @@ fun AddMaterialDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = AmberOrange),
                 modifier = Modifier.testTag("confirm_add_mat_btn")
             ) {
-                Text("Add Material", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text("Save Material", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

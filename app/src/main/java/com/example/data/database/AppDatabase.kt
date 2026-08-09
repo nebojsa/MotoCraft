@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
         SeatMaterial::class,
         BuildProject::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -330,6 +330,8 @@ abstract class AppDatabase : RoomDatabase() {
                 SeatMaterial(
                     name = "40mm Bonded High-Density Base Foam",
                     type = MaterialType.HIGH_DENSITY_FOAM,
+                    texture = "Solid Cell Foam",
+                    colorOption = "Natural Yellow",
                     quantityOnHand = 4.0,
                     unit = "slabs",
                     unitCost = 35.0,
@@ -344,6 +346,8 @@ abstract class AppDatabase : RoomDatabase() {
                 SeatMaterial(
                     name = "20mm Visco Elastic Memory Foam Overlay",
                     type = MaterialType.MEMORY_FOAM,
+                    texture = "Open Cell Visco",
+                    colorOption = "Light Blue",
                     quantityOnHand = 6.0,
                     unit = "slabs",
                     unitCost = 28.0,
@@ -358,6 +362,8 @@ abstract class AppDatabase : RoomDatabase() {
                 SeatMaterial(
                     name = "Medical Grade 25mm Anatomical Gel Pad",
                     type = MaterialType.GEL_PAD,
+                    texture = "Honeycomb Grid",
+                    colorOption = "Translucent Blue",
                     quantityOnHand = 1.0, // Low inventory warning
                     unit = "pads",
                     unitCost = 42.0,
@@ -372,6 +378,8 @@ abstract class AppDatabase : RoomDatabase() {
                 SeatMaterial(
                     name = "Black Diamond-Stitched Marine Vinyl",
                     type = MaterialType.MARINE_VINYL,
+                    texture = "Diamond Tuck & Roll",
+                    colorOption = "Jet Black",
                     quantityOnHand = 10.0,
                     unit = "sq ft",
                     unitCost = 14.0,
@@ -386,6 +394,8 @@ abstract class AppDatabase : RoomDatabase() {
                 SeatMaterial(
                     name = "Italian Cognac Full-Grain Leather",
                     type = MaterialType.GENUINE_LEATHER,
+                    texture = "Vintage Distressed Grain",
+                    colorOption = "Espresso Cognac",
                     quantityOnHand = 8.5,
                     unit = "sq ft",
                     unitCost = 38.0,
@@ -394,6 +404,22 @@ abstract class AppDatabase : RoomDatabase() {
                     dimensions = "Selected Hide 1.2mm thickness",
                     assignedProject = "CB650R Custom Restructure",
                     notes = "Treated with hydrophobic beeswax finish"
+                )
+            )
+            dao.insertSeatMaterial(
+                SeatMaterial(
+                    name = "Perforated High-Grip Alcantara Suede",
+                    type = MaterialType.ALCANTARA,
+                    texture = "Perforated Racing Grid",
+                    colorOption = "Charcoal Grey",
+                    quantityOnHand = 5.0,
+                    unit = "sq ft",
+                    unitCost = 45.0,
+                    colorOrGrade = "Automotive Microfiber",
+                    reorderLevel = 2.0,
+                    dimensions = "1m x 0.8m",
+                    assignedProject = "Track Day Comfort Seat Base",
+                    notes = "High friction anti-slip surface for sport cornering"
                 )
             )
             dao.insertSeatMaterial(

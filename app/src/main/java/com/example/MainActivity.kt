@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.database.AppDatabase
 import com.example.data.repository.MotoRepository
+import com.example.data.entities.MaintenanceRecord
 import com.example.ui.components.AddBikeDialog
 import com.example.ui.components.AddListingDialog
 import com.example.ui.components.AddMaintenanceDialog
@@ -26,6 +27,7 @@ import com.example.ui.components.AddMaterialDialog
 import com.example.ui.components.AddModDialog
 import com.example.ui.components.AddProjectDialog
 import com.example.ui.components.AddReminderDialog
+import com.example.util.InvoiceGeneratorDialog
 import com.example.ui.components.MotoBottomNavBar
 import com.example.ui.components.MotoTopBar
 import com.example.ui.components.NavTab
@@ -71,6 +73,8 @@ fun MotoAppContent(viewModel: MotoViewModel) {
     var showAddReminderDialog by remember { mutableStateOf(false) }
     var showAddMaterialDialog by remember { mutableStateOf(false) }
     var showAddProjectDialog by remember { mutableStateOf(false) }
+    var showInvoiceDialog by remember { mutableStateOf(false) }
+    var selectedRecordForInvoice by remember { mutableStateOf<MaintenanceRecord?>(null) }
 
     // Reactive database states
     val motorcycles by viewModel.motorcycles.collectAsStateWithLifecycle()
@@ -136,7 +140,11 @@ fun MotoAppContent(viewModel: MotoViewModel) {
                     onAddLogClicked = { showAddMaintDialog = true },
                     onAddReminderClicked = { showAddReminderDialog = true },
                     onCompleteReminder = { reminder -> viewModel.completeReminder(reminder) },
-                    onDeleteLog = { record -> viewModel.deleteMaintenanceRecord(record) }
+                    onDeleteLog = { record -> viewModel.deleteMaintenanceRecord(record) },
+                    onGenerateInvoice = { record ->
+                        selectedRecordForInvoice = record
+                        showInvoiceDialog = true
+                    }
                 )
 
                 NavTab.SEAT_CRAFT -> SeatCraftScreen(
@@ -220,6 +228,14 @@ fun MotoAppContent(viewModel: MotoViewModel) {
                 viewModel.addBuildProject(name, budget, date, notes)
                 showAddProjectDialog = false
             }
+        )
+    }
+
+    if (showInvoiceDialog) {
+        InvoiceGeneratorDialog(
+            initialRecord = selectedRecordForInvoice,
+            bikeName = selectedBike?.name ?: "Custom Motorcycle",
+            onDismiss = { showInvoiceDialog = false }
         )
     }
 }

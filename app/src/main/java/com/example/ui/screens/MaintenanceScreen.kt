@@ -63,6 +63,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material3.TextButton
+
 @Composable
 fun MaintenanceScreen(
     motorcycle: Motorcycle?,
@@ -72,6 +75,7 @@ fun MaintenanceScreen(
     onAddReminderClicked: () -> Unit,
     onCompleteReminder: (ServiceReminder) -> Unit,
     onDeleteLog: (MaintenanceRecord) -> Unit,
+    onGenerateInvoice: (MaintenanceRecord?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentOdometer = motorcycle?.odometerKm ?: 0
@@ -275,10 +279,17 @@ fun MaintenanceScreen(
                             letterSpacing = 1.sp
                         )
                     )
-                    Text(
-                        text = "Total Spent: $${String.format("%.2f", maintenanceRecords.sumOf { it.cost })}",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = TechCyan)
-                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(
+                            onClick = { onGenerateInvoice(null) },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = AmberOrange, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Create Invoice", color = TextPrimary, fontSize = 11.sp)
+                        }
+                    }
                 }
             }
 
@@ -303,46 +314,58 @@ fun MaintenanceScreen(
                             .fillMaxWidth()
                             .border(1.dp, CardBorderDark, RoundedCornerShape(14.dp))
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = record.serviceType,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = record.serviceType,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
                                     )
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "$dateStr • ${record.odometerKm} km • ${record.performedBy}",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
-                                )
-                                if (record.notes.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = record.notes,
-                                        style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 11.sp)
+                                        text = "$dateStr • ${record.odometerKm} km • ${record.performedBy}",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
                                     )
+                                    if (record.notes.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = record.notes,
+                                            style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 11.sp)
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "$${String.format("%.2f", record.cost)}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = AmberOrange
+                                        )
+                                    )
+                                    IconButton(onClick = { onDeleteLog(record) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete Log", tint = CrimsonRed, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
 
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "$${String.format("%.2f", record.cost)}",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = AmberOrange
-                                    )
-                                )
-                                IconButton(onClick = { onDeleteLog(record) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete Log", tint = CrimsonRed, modifier = Modifier.size(18.dp))
-                                }
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = { onGenerateInvoice(record) },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = TechCyan, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Generate Workshop Invoice", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }

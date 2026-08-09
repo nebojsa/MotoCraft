@@ -12,11 +12,15 @@ data class MaintenanceRecord(
     val description: String = "",
     val date: Long = System.currentTimeMillis(),
     val cost: Double = 0.0,
-    val performedBy: String = "Owner / Self"
+    val performedBy: String = "Owner / Self",
+    val linkedPartName: String = "",
+    val linkedPartCost: Double = 0.0
 ) {
     // Convenience properties for backwards compatibility
     val odometerKm: Int get() = mileage
     val notes: String get() = description
     val serviceDate: Long get() = date
 }
+
+typealias MaintenanceLog = MaintenanceRecord
 

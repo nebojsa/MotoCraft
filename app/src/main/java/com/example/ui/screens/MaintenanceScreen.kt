@@ -63,6 +63,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.TextButton
 
@@ -76,6 +77,7 @@ fun MaintenanceScreen(
     onCompleteReminder: (ServiceReminder) -> Unit,
     onDeleteLog: (MaintenanceRecord) -> Unit,
     onGenerateInvoice: (MaintenanceRecord?) -> Unit = {},
+    onPayOnline: (MaintenanceRecord) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentOdometer = motorcycle?.odometerKm ?: 0
@@ -340,16 +342,30 @@ fun MaintenanceScreen(
                                             style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 11.sp)
                                         )
                                     }
+                                    if (record.linkedPartName.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        BadgeChip(
+                                            text = "Linked Part: ${record.linkedPartName} ($${String.format("%.2f", record.linkedPartCost)})",
+                                            color = TechCyan
+                                        )
+                                    }
                                 }
 
                                 Column(horizontalAlignment = Alignment.End) {
+                                    val totalCost = record.cost + record.linkedPartCost
                                     Text(
-                                        text = "$${String.format("%.2f", record.cost)}",
+                                        text = "$${String.format("%.2f", totalCost)}",
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.ExtraBold,
                                             color = AmberOrange
                                         )
                                     )
+                                    if (record.linkedPartCost > 0.0) {
+                                        Text(
+                                            text = "Labor $${String.format("%.0f", record.cost)} + Part $${String.format("%.0f", record.linkedPartCost)}",
+                                            style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 10.sp)
+                                        )
+                                    }
                                     IconButton(onClick = { onDeleteLog(record) }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete Log", tint = CrimsonRed, modifier = Modifier.size(18.dp))
                                     }
@@ -358,14 +374,30 @@ fun MaintenanceScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            OutlinedButton(
-                                onClick = { onGenerateInvoice(record) },
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = TechCyan, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Generate Workshop Invoice", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                OutlinedButton(
+                                    onClick = { onGenerateInvoice(record) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = TechCyan, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Invoice PDF", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+
+                                Button(
+                                    onClick = { onPayOnline(record) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Payment, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Pay Online", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

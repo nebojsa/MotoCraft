@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.entities.MaterialType
 import com.example.data.entities.ModCategory
 import com.example.data.entities.ModStatus
@@ -43,6 +44,7 @@ import com.example.data.entities.PartCondition
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CardBorderDark
 import com.example.ui.theme.CardDark
+import com.example.ui.theme.TechCyan
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -268,30 +270,49 @@ fun AddListingDialog(
 @Composable
 fun AddMaintenanceDialog(
     onDismiss: () -> Unit,
-    onConfirm: (serviceType: String, odometer: Int, cost: Double, notes: String) -> Unit
+    onConfirm: (serviceType: String, odometer: Int, cost: Double, notes: String, linkedPartName: String, linkedPartCost: Double) -> Unit
 ) {
     var serviceType by remember { mutableStateOf("") }
     var odoStr by remember { mutableStateOf("12000") }
     var costStr by remember { mutableStateOf("80") }
     var notes by remember { mutableStateOf("") }
+    var linkedPartName by remember { mutableStateOf("") }
+    var linkedPartCostStr by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = CardDark,
         title = { Text("Log Maintenance Service", color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 StyledTextField(value = serviceType, onValueChange = { serviceType = it }, label = "Service Performed (e.g. Oil Change)", tag = "input_maint_type")
                 StyledTextField(value = odoStr, onValueChange = { odoStr = it }, label = "Odometer (km)", keyboardType = KeyboardType.Number, tag = "input_maint_odo")
-                StyledTextField(value = costStr, onValueChange = { costStr = it }, label = "Service Cost ($)", keyboardType = KeyboardType.Number, tag = "input_maint_cost")
-                StyledTextField(value = notes, onValueChange = { notes = it }, label = "Notes / Parts Used", tag = "input_maint_notes")
+                StyledTextField(value = costStr, onValueChange = { costStr = it }, label = "Labor / Service Cost ($)", keyboardType = KeyboardType.Number, tag = "input_maint_cost")
+                StyledTextField(value = notes, onValueChange = { notes = it }, label = "Notes / Work Description", tag = "input_maint_notes")
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("LINK AFTERMARKET PART (INVENTORY)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TechCyan)
+                StyledTextField(value = linkedPartName, onValueChange = { linkedPartName = it }, label = "Purchased Part Name / SKU (Optional)", tag = "input_maint_linked_part")
+                StyledTextField(value = linkedPartCostStr, onValueChange = { linkedPartCostStr = it }, label = "Part Cost ($)", keyboardType = KeyboardType.Number, tag = "input_maint_part_cost")
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (serviceType.isNotBlank()) {
-                        onConfirm(serviceType, odoStr.toIntOrNull() ?: 0, costStr.toDoubleOrNull() ?: 0.0, notes)
+                        onConfirm(
+                            serviceType,
+                            odoStr.toIntOrNull() ?: 0,
+                            costStr.toDoubleOrNull() ?: 0.0,
+                            notes,
+                            linkedPartName,
+                            linkedPartCostStr.toDoubleOrNull() ?: 0.0
+                        )
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = AmberOrange)

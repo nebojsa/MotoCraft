@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
         BuildProject::class,
         SeatOrder::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -281,10 +281,12 @@ abstract class AppDatabase : RoomDatabase() {
                     motorcycleId = bike1Id,
                     serviceType = "Motul 300V 10W40 Synthetic Oil & OEM Filter",
                     mileage = 12000,
-                    description = "Replaced drain washer & torqued to 43 Nm",
+                    description = "Replaced drain washer & torqued to 43 Nm. Installed performance oil filter.",
                     date = System.currentTimeMillis() - 86400000L * 14,
                     cost = 135.0,
-                    performedBy = "Owner"
+                    performedBy = "Owner",
+                    linkedPartName = "K&N Performance Oil Filter",
+                    linkedPartCost = 25.0
                 )
             )
             dao.insertMaintenanceRecord(
@@ -295,7 +297,9 @@ abstract class AppDatabase : RoomDatabase() {
                     description = "Fully bled front Brembo calipers and rear master",
                     date = System.currentTimeMillis() - 86400000L * 30,
                     cost = 55.0,
-                    performedBy = "Owner"
+                    performedBy = "Owner",
+                    linkedPartName = "Brembo Z04 Race Brake Pads",
+                    linkedPartCost = 140.0
                 )
             )
 

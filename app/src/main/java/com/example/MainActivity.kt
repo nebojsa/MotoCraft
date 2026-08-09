@@ -28,6 +28,7 @@ import com.example.ui.components.AddModDialog
 import com.example.ui.components.AddProjectDialog
 import com.example.ui.components.AddReminderDialog
 import com.example.util.InvoiceGeneratorDialog
+import com.example.util.OnlinePaymentCheckoutDialog
 import com.example.ui.components.MotoBottomNavBar
 import com.example.ui.components.MotoTopBar
 import com.example.ui.components.NavTab
@@ -75,6 +76,8 @@ fun MotoAppContent(viewModel: MotoViewModel) {
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showInvoiceDialog by remember { mutableStateOf(false) }
     var selectedRecordForInvoice by remember { mutableStateOf<MaintenanceRecord?>(null) }
+    var showOnlinePaymentDialog by remember { mutableStateOf(false) }
+    var selectedRecordForPayment by remember { mutableStateOf<MaintenanceRecord?>(null) }
 
     // Reactive database states
     val motorcycles by viewModel.motorcycles.collectAsStateWithLifecycle()
@@ -148,6 +151,10 @@ fun MotoAppContent(viewModel: MotoViewModel) {
                     onGenerateInvoice = { record ->
                         selectedRecordForInvoice = record
                         showInvoiceDialog = true
+                    },
+                    onPayOnline = { record ->
+                        selectedRecordForPayment = record
+                        showOnlinePaymentDialog = true
                     }
                 )
 
@@ -198,8 +205,15 @@ fun MotoAppContent(viewModel: MotoViewModel) {
     if (showAddMaintDialog) {
         AddMaintenanceDialog(
             onDismiss = { showAddMaintDialog = false },
-            onConfirm = { serviceType, odo, cost, notes ->
-                viewModel.addMaintenanceRecord(serviceType, odo, cost, notes)
+            onConfirm = { serviceType, odo, cost, notes, partName, partCost ->
+                viewModel.addMaintenanceRecord(
+                    serviceType = serviceType,
+                    mileage = odo,
+                    cost = cost,
+                    description = notes,
+                    linkedPartName = partName,
+                    linkedPartCost = partCost
+                )
                 showAddMaintDialog = false
             }
         )
@@ -240,6 +254,20 @@ fun MotoAppContent(viewModel: MotoViewModel) {
             initialRecord = selectedRecordForInvoice,
             bikeName = selectedBike?.name ?: "Custom Motorcycle",
             onDismiss = { showInvoiceDialog = false }
+        )
+    }
+
+    if (showOnlinePaymentDialog) {
+        val totalAmount = selectedRecordForPayment?.let { it.cost + it.linkedPartCost } ?: 150.0
+        val serviceTitle = selectedRecordForPayment?.serviceType ?: "Motorcycle Workshop Service"
+        OnlinePaymentCheckoutDialog(
+            itemTitle = serviceTitle,
+            amountToPay = totalAmount,
+            customerEmail = "rider@motocraft.app",
+            onPaymentSuccess = { result ->
+                // Payment processed successfully
+            },
+            onDismiss = { showOnlinePaymentDialog = false }
         )
     }
 }

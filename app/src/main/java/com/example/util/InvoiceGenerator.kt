@@ -2,6 +2,13 @@ package com.example.util
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +29,8 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -28,7 +38,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.example.data.entities.MaintenanceRecord
 import com.example.data.entities.SeatOrder
 import com.example.ui.components.StyledTextField
@@ -62,6 +72,8 @@ import com.example.ui.theme.TechCyan
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,6 +103,7 @@ data class ServiceInvoice(
     val bikeName: String,
     val mileageKm: Int,
     val customerName: String = "Valued Rider",
+    val customerEmail: String = "rider@example.com",
     val items: List<InvoiceLineItem>,
     val taxRatePercent: Double = 8.5,
     val notes: String = "Thank you for trusting MotoCraft Workshop with your machine!"
@@ -112,7 +125,7 @@ data class ServiceInvoice(
         sb.appendLine("--------------------------------------------------")
         sb.appendLine("INVOICE #: $invoiceNumber")
         sb.appendLine("DATE: ${dateFormat.format(Date(date))}")
-        sb.appendLine("CUSTOMER: $customerName")
+        sb.appendLine("CUSTOMER: $customerName ($customerEmail)")
         sb.appendLine("VEHICLE: $bikeName (Odometer: $mileageKm km)")
         sb.appendLine("--------------------------------------------------")
         sb.appendLine("ITEMS & SERVICE DESCRIPTION:")
@@ -182,7 +195,7 @@ data class ServiceInvoice(
                     <div class="grid">
                         <div>
                             <div class="label">Customer / Rider</div>
-                            <div class="value">$customerName</div>
+                            <div class="value">$customerName ($customerEmail)</div>
                         </div>
                         <div>
                             <div class="label">Motorcycle & Mileage</div>
@@ -235,6 +248,189 @@ data class ServiceInvoice(
 
 object InvoiceGenerator {
 
+    /**
+     * Generates a PDF file on disk for the given ServiceInvoice using Android's native PdfDocument.
+     */
+    fun generatePdfFile(context: Context, invoice: ServiceInvoice): File {
+        val pdfDocument = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 dimensions in points
+        val page = pdfDocument.startPage(pageInfo)
+        val canvas: Canvas = page.canvas
+
+        val paint = Paint()
+        val titlePaint = Paint()
+        val headerPaint = Paint()
+
+        // Background
+        canvas.drawColor(AndroidColor.WHITE)
+
+        // Header Background Bar
+        paint.color = AndroidColor.parseColor("#161E27")
+        canvas.drawRect(0f, 0f, 595f, 110f, paint)
+
+        // Title
+        titlePaint.color = AndroidColor.parseColor("#FF9800")
+        titlePaint.textSize = 20f
+        titlePaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText(invoice.companyDetails.companyName.uppercase(), 30f, 45f, titlePaint)
+
+        // Subtitle Info
+        paint.color = AndroidColor.parseColor("#8B98A5")
+        paint.textSize = 10f
+        canvas.drawText("Tax ID: ${invoice.companyDetails.taxId} | Phone: ${invoice.companyDetails.phone}", 30f, 65f, paint)
+        canvas.drawText("${invoice.companyDetails.address} | ${invoice.companyDetails.email}", 30f, 80f, paint)
+
+        // Invoice Badge Right
+        headerPaint.color = AndroidColor.WHITE
+        headerPaint.textSize = 18f
+        headerPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("INVOICE #${invoice.invoiceNumber}", 350f, 50f, headerPaint)
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        paint.color = AndroidColor.parseColor("#00E676")
+        canvas.drawText("Date: ${dateFormat.format(Date(invoice.date))}", 350f, 70f, paint)
+
+        // Customer & Vehicle Info Box
+        paint.color = AndroidColor.parseColor("#F0F4F8")
+        canvas.drawRoundRect(30f, 130f, 565f, 210f, 8f, 8f, paint)
+
+        paint.color = AndroidColor.parseColor("#1C2732")
+        paint.textSize = 11f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("CUSTOMER / RIDER:", 45f, 155f, paint)
+        canvas.drawText("MOTORCYCLE / ODOMETER:", 310f, 155f, paint)
+
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        canvas.drawText("${invoice.customerName} (${invoice.customerEmail})", 45f, 175f, paint)
+        canvas.drawText("${invoice.bikeName} (${invoice.mileageKm} km)", 310f, 175f, paint)
+
+        // Table Header
+        paint.color = AndroidColor.parseColor("#253341")
+        canvas.drawRect(30f, 230f, 565f, 255f, paint)
+
+        headerPaint.color = AndroidColor.WHITE
+        headerPaint.textSize = 10f
+        canvas.drawText("#", 40f, 247f, headerPaint)
+        canvas.drawText("SERVICE / PART DESCRIPTION", 70f, 247f, headerPaint)
+        canvas.drawText("QTY", 380f, 247f, headerPaint)
+        canvas.drawText("UNIT PRICE", 430f, 247f, headerPaint)
+        canvas.drawText("TOTAL", 510f, 247f, headerPaint)
+
+        // Table Items
+        var currentY = 280f
+        paint.color = AndroidColor.parseColor("#333333")
+        paint.textSize = 10f
+
+        invoice.items.forEachIndexed { index, item ->
+            canvas.drawText("${index + 1}", 40f, currentY, paint)
+
+            val desc = if (item.description.length > 50) item.description.take(47) + "..." else item.description
+            canvas.drawText(desc, 70f, currentY, paint)
+            canvas.drawText("${item.quantity}", 380f, currentY, paint)
+            canvas.drawText("$${String.format("%.2f", item.unitPrice)}", 430f, currentY, paint)
+            canvas.drawText("$${String.format("%.2f", item.totalAmount)}", 510f, currentY, paint)
+
+            paint.color = AndroidColor.parseColor("#E0E0E0")
+            canvas.drawLine(30f, currentY + 10f, 565f, currentY + 10f, paint)
+            paint.color = AndroidColor.parseColor("#333333")
+
+            currentY += 30f
+        }
+
+        // Totals Box Right
+        val totalsStartY = currentY + 20f
+        paint.color = AndroidColor.parseColor("#666666")
+        canvas.drawText("Subtotal:", 380f, totalsStartY, paint)
+        canvas.drawText("$${String.format("%.2f", invoice.subtotal)}", 510f, totalsStartY, paint)
+
+        canvas.drawText("Tax (${invoice.taxRatePercent}%):", 380f, totalsStartY + 20f, paint)
+        canvas.drawText("$${String.format("%.2f", invoice.taxAmount)}", 510f, totalsStartY + 20f, paint)
+
+        paint.color = AndroidColor.parseColor("#00897B")
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        paint.textSize = 12f
+        canvas.drawText("Grand Total:", 380f, totalsStartY + 45f, paint)
+        canvas.drawText("$${String.format("%.2f", invoice.grandTotal)}", 510f, totalsStartY + 45f, paint)
+
+        // Footer Notes
+        if (invoice.notes.isNotBlank()) {
+            paint.color = AndroidColor.parseColor("#F5F5F5")
+            canvas.drawRoundRect(30f, 720f, 565f, 780f, 6f, 6f, paint)
+
+            paint.color = AndroidColor.parseColor("#333333")
+            paint.textSize = 9f
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            canvas.drawText("NOTES & WORKSHOP WARRANTY:", 40f, 738f, paint)
+
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+            canvas.drawText(invoice.notes.take(90), 40f, 758f, paint)
+        }
+
+        // Footer Brand
+        paint.color = AndroidColor.parseColor("#999999")
+        paint.textSize = 8f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        canvas.drawText("Generated by MotoCraft Workshop Management System • www.motocraft.app", 130f, 815f, paint)
+
+        pdfDocument.finishPage(page)
+
+        // Save PDF file
+        val invoicesDir = File(context.cacheDir, "invoices")
+        if (!invoicesDir.exists()) invoicesDir.mkdirs()
+
+        val pdfFile = File(invoicesDir, "Invoice_${invoice.invoiceNumber}.pdf")
+        FileOutputStream(pdfFile).use { out ->
+            pdfDocument.writeTo(out)
+        }
+        pdfDocument.close()
+
+        return pdfFile
+    }
+
+    /**
+     * Generates a PDF bill and opens the user's preferred Email app pre-filled with recipient address,
+     * invoice subject, body summary, and attached PDF document.
+     */
+    fun sendInvoicePdfByEmail(context: Context, invoice: ServiceInvoice, recipientEmail: String) {
+        try {
+            val pdfFile = generatePdfFile(context, invoice)
+            val pdfUri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                pdfFile
+            )
+
+            val subject = "Invoice #${invoice.invoiceNumber} - ${invoice.companyDetails.companyName}"
+            val bodyText = buildString {
+                append("Dear ${invoice.customerName},\n\n")
+                append("Please find attached your official PDF invoice for recent service on your motorcycle (${invoice.bikeName}).\n\n")
+                append("Invoice #: ${invoice.invoiceNumber}\n")
+                append("Subtotal: $${String.format("%.2f", invoice.subtotal)}\n")
+                append("Tax (${invoice.taxRatePercent}%): $${String.format("%.2f", invoice.taxAmount)}\n")
+                append("Grand Total: $${String.format("%.2f", invoice.grandTotal)}\n\n")
+                if (invoice.notes.isNotBlank()) {
+                    append("Notes: ${invoice.notes}\n\n")
+                }
+                append("Thank you for choosing ${invoice.companyDetails.companyName}!\n\n")
+                append("Best regards,\n${invoice.companyDetails.companyName} Team")
+            }
+
+            val emailIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(recipientEmail.ifBlank { invoice.customerEmail }))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, bodyText)
+                putExtra(Intent.EXTRA_STREAM, pdfUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(emailIntent, "Send PDF Bill via Email...")
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error creating/sending PDF: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun shareInvoiceDocument(context: Context, invoice: ServiceInvoice) {
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -263,13 +459,26 @@ object InvoiceGenerator {
         company: CompanyDetails
     ): ServiceInvoice {
         val invoiceNo = "INV-MC-${(System.currentTimeMillis() % 100000)}"
-        val items = listOf(
+        val items = mutableListOf<InvoiceLineItem>()
+
+        items.add(
             InvoiceLineItem(
                 description = record.serviceType + if (record.description.isNotBlank()) " - ${record.description}" else "",
                 quantity = 1.0,
                 unitPrice = record.cost
             )
         )
+
+        if (record.linkedPartName.isNotBlank()) {
+            items.add(
+                InvoiceLineItem(
+                    description = "Aftermarket Part: ${record.linkedPartName}",
+                    quantity = 1.0,
+                    unitPrice = record.linkedPartCost
+                )
+            )
+        }
+
         return ServiceInvoice(
             invoiceNumber = invoiceNo,
             date = record.date,
@@ -342,7 +551,8 @@ fun InvoiceGeneratorDialog(
     var companyAddress by remember { mutableStateOf("742 Performance Way, Speed City") }
     var companyPhone by remember { mutableStateOf("+1 (555) 019-2831") }
     var companyEmail by remember { mutableStateOf("service@motocraft.app") }
-    var customerName by remember { mutableStateOf("Rider / Bike Owner") }
+    var customerName by remember { mutableStateOf("Valued Rider") }
+    var customerEmail by remember { mutableStateOf("rider@example.com") }
     var taxRateStr by remember { mutableStateOf("8.5") }
 
     var serviceDesc by remember { mutableStateOf(initialRecord?.serviceType ?: "Full Synthetic Oil & Filter Service") }
@@ -374,6 +584,7 @@ fun InvoiceGeneratorDialog(
         bikeName = bikeName,
         mileageKm = mileage,
         customerName = customerName,
+        customerEmail = customerEmail,
         items = listOf(
             InvoiceLineItem(description = serviceDesc, quantity = 1.0, unitPrice = cost)
         ),
@@ -438,8 +649,12 @@ fun InvoiceGeneratorDialog(
                     }
                 }
 
-                // Section 2: Service & Invoice Data Inputs
-                StyledTextField(value = customerName, onValueChange = { customerName = it }, label = "Customer / Owner Name", tag = "inv_cust_name")
+                // Section 2: Service & Customer Inputs
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StyledTextField(value = customerName, onValueChange = { customerName = it }, label = "Customer Name", modifier = Modifier.weight(1f), tag = "inv_cust_name")
+                    StyledTextField(value = customerEmail, onValueChange = { customerEmail = it }, label = "Recipient Email", modifier = Modifier.weight(1.2f), tag = "inv_cust_email")
+                }
+
                 StyledTextField(value = serviceDesc, onValueChange = { serviceDesc = it }, label = "Service Description & Details", tag = "inv_svc_desc")
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -499,34 +714,59 @@ fun InvoiceGeneratorDialog(
             }
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        val textToCopy = if (exportFormatIsHtml) currentInvoice.generateHtmlInvoice() else currentInvoice.generatePlainTextInvoice()
-                        clipboardManager.setText(AnnotatedString(textToCopy))
-                        invoiceCopiedNotification = true
-                    },
-                    modifier = Modifier.testTag("copy_invoice_btn")
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextPrimary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Copy", color = TextPrimary)
-                }
-
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // PDF Email Action Button
                 Button(
                     onClick = {
-                        if (exportFormatIsHtml) {
-                            InvoiceGenerator.shareInvoiceHtml(context, currentInvoice)
-                        } else {
-                            InvoiceGenerator.shareInvoiceDocument(context, currentInvoice)
-                        }
+                        InvoiceGenerator.sendInvoicePdfByEmail(context, currentInvoice, customerEmail)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AmberOrange),
-                    modifier = Modifier.testTag("share_invoice_doc_btn")
+                    colors = ButtonDefaults.buttonColors(containerColor = TechCyan),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("send_pdf_email_btn")
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share Doc", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Email, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("SEND PDF BILL TO EMAIL", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val textToCopy = if (exportFormatIsHtml) currentInvoice.generateHtmlInvoice() else currentInvoice.generatePlainTextInvoice()
+                            clipboardManager.setText(AnnotatedString(textToCopy))
+                            invoiceCopiedNotification = true
+                        },
+                        modifier = Modifier.weight(1f).testTag("copy_invoice_btn")
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Copy", color = TextPrimary, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            if (exportFormatIsHtml) {
+                                InvoiceGenerator.shareInvoiceHtml(context, currentInvoice)
+                            } else {
+                                InvoiceGenerator.shareInvoiceDocument(context, currentInvoice)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = AmberOrange),
+                        modifier = Modifier.weight(1f).testTag("share_invoice_doc_btn")
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Share", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
         },

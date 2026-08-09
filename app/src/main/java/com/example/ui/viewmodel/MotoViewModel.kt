@@ -95,7 +95,7 @@ class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
     ) { bike, mods, logs, materials ->
         val bikeBudget = bike?.totalBudget ?: 15000.0
         val modSpent = mods.sumOf { it.cost }
-        val maintSpent = logs.sumOf { it.cost }
+        val maintSpent = logs.sumOf { it.cost + it.linkedPartCost }
         val matSpent = materials.sumOf { it.quantityOnHand * it.unitCost }
         val totalSpent = modSpent + maintSpent
 
@@ -232,7 +232,9 @@ class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
         mileage: Int,
         cost: Double,
         description: String,
-        date: Long = System.currentTimeMillis()
+        date: Long = System.currentTimeMillis(),
+        linkedPartName: String = "",
+        linkedPartCost: Double = 0.0
     ) {
         val bikeId = selectedMotorcycle.value?.id ?: 1L
         viewModelScope.launch {
@@ -243,7 +245,9 @@ class MotoViewModel(private val repository: MotoRepository) : ViewModel() {
                     mileage = mileage,
                     description = description,
                     date = date,
-                    cost = cost
+                    cost = cost,
+                    linkedPartName = linkedPartName,
+                    linkedPartCost = linkedPartCost
                 )
             )
             // Also update bike odometer if higher

@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.dao.MotoDao
+import com.example.data.dao.SeatOrderDao
 import com.example.data.entities.BuildProject
 import com.example.data.entities.MaintenanceRecord
 import com.example.data.entities.MarketplaceItem
@@ -14,8 +15,11 @@ import com.example.data.entities.ModCategory
 import com.example.data.entities.ModStatus
 import com.example.data.entities.Modification
 import com.example.data.entities.Motorcycle
+import com.example.data.entities.OrderStatus
 import com.example.data.entities.PartCondition
+import com.example.data.entities.PaymentStatus
 import com.example.data.entities.SeatMaterial
+import com.example.data.entities.SeatOrder
 import com.example.data.entities.ServiceReminder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,13 +33,15 @@ import kotlinx.coroutines.launch
         MaintenanceRecord::class,
         ServiceReminder::class,
         SeatMaterial::class,
-        BuildProject::class
+        BuildProject::class,
+        SeatOrder::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun motoDao(): MotoDao
+    abstract fun seatOrderDao(): SeatOrderDao
 
     companion object {
         @Volatile
@@ -61,13 +67,13 @@ abstract class AppDatabase : RoomDatabase() {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        populateInitialData(database.motoDao())
+                        populateInitialData(database.motoDao(), database.seatOrderDao())
                     }
                 }
             }
         }
 
-        suspend fun populateInitialData(dao: MotoDao) {
+        suspend fun populateInitialData(dao: MotoDao, seatOrderDao: SeatOrderDao? = null) {
             // 1. Motorcycles
             val bike1Id = dao.insertMotorcycle(
                 Motorcycle(
@@ -462,16 +468,55 @@ abstract class AppDatabase : RoomDatabase() {
                     notes = "High speed ergonomics, suspension & power delivery upgrades"
                 )
             )
-            dao.insertBuildProject(
-                BuildProject(
-                    motorcycleId = bike2Id,
-                    name = "Neo Cafe Racer Custom Restructure",
-                    targetBudget = 4500.0,
-                    targetCompletionDate = "November 2026",
-                    status = "Active",
-                    notes = "Saddle craft, custom exhaust & subframe modification"
+            // 8. Seat Orders
+            seatOrderDao?.let { sDao ->
+                sDao.insertSeatOrder(
+                    SeatOrder(
+                        customerName = "Marcus Vance",
+                        customerPhone = "+1 (555) 381-9201",
+                        motorcycleModel = "Yamaha YZF-R1M",
+                        bikerHeightCm = 182.0,
+                        bikerWeightKg = 88.0,
+                        bikerInseamCm = 84.0,
+                        ridingPosture = "Sport / Track",
+                        coverMaterialName = "Perforated Anti-Slip Marine Vinyl",
+                        coverTexture = "Hexagon Diamond Stitched",
+                        colorOption = "Jet Black with Racing Blue Stitching",
+                        foamThicknessMm = 45.0,
+                        hasGelPad = true,
+                        gelPadAreaSqCm = 350.0,
+                        baseMaterialCost = 120.0,
+                        laborCost = 150.0,
+                        depositAmount = 100.0,
+                        orderStatus = OrderStatus.IN_PROGRESS,
+                        paymentStatus = PaymentStatus.DEPOSIT_PAID,
+                        notes = "Custom high speed ergonomic recessed center channel"
+                    )
                 )
-            )
+                sDao.insertSeatOrder(
+                    SeatOrder(
+                        customerName = "Elena Rostova",
+                        customerPhone = "+1 (555) 742-1088",
+                        motorcycleModel = "BMW R1250 GS Adventure",
+                        bikerHeightCm = 172.0,
+                        bikerWeightKg = 74.0,
+                        bikerInseamCm = 78.0,
+                        ridingPosture = "Touring / Adventure",
+                        coverMaterialName = "Italian Full-Grain Cognac Leather",
+                        coverTexture = "Vintage Distressed Tuck & Roll",
+                        colorOption = "Espresso Cognac",
+                        foamThicknessMm = 50.0,
+                        hasGelPad = true,
+                        gelPadAreaSqCm = 400.0,
+                        baseMaterialCost = 160.0,
+                        laborCost = 180.0,
+                        depositAmount = 340.0,
+                        orderStatus = OrderStatus.READY_FOR_FITTING,
+                        paymentStatus = PaymentStatus.PAID_IN_FULL,
+                        notes = "Low profile cut -15mm for ground reach comfort"
+                    )
+                )
+            }
         }
     }
 }

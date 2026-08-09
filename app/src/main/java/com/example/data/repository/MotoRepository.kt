@@ -1,16 +1,22 @@
 package com.example.data.repository
 
 import com.example.data.dao.MotoDao
+import com.example.data.dao.SeatOrderDao
 import com.example.data.entities.BuildProject
 import com.example.data.entities.MaintenanceRecord
 import com.example.data.entities.MarketplaceItem
 import com.example.data.entities.Modification
 import com.example.data.entities.Motorcycle
 import com.example.data.entities.SeatMaterial
+import com.example.data.entities.SeatOrder
 import com.example.data.entities.ServiceReminder
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
-class MotoRepository(private val dao: MotoDao) {
+class MotoRepository(
+    private val dao: MotoDao,
+    private val seatOrderDao: SeatOrderDao? = null
+) {
     val motorcycles: Flow<List<Motorcycle>> = dao.getAllMotorcycles()
     val allModifications: Flow<List<Modification>> = dao.getAllModifications()
     val marketplaceItems: Flow<List<MarketplaceItem>> = dao.getAllMarketplaceItems()
@@ -18,6 +24,7 @@ class MotoRepository(private val dao: MotoDao) {
     val serviceReminders: Flow<List<ServiceReminder>> = dao.getAllReminders()
     val seatMaterials: Flow<List<SeatMaterial>> = dao.getAllSeatMaterials()
     val buildProjects: Flow<List<BuildProject>> = dao.getAllProjects()
+    val seatOrders: Flow<List<SeatOrder>> = seatOrderDao?.getAllSeatOrders() ?: flowOf(emptyList())
 
     fun getModificationsForBike(bikeId: Long): Flow<List<Modification>> =
         dao.getModificationsForBike(bikeId)
@@ -57,4 +64,8 @@ class MotoRepository(private val dao: MotoDao) {
     suspend fun insertBuildProject(project: BuildProject): Long = dao.insertBuildProject(project)
     suspend fun updateBuildProject(project: BuildProject) = dao.updateBuildProject(project)
     suspend fun deleteBuildProject(project: BuildProject) = dao.deleteBuildProject(project)
+
+    suspend fun insertSeatOrder(order: SeatOrder): Long = seatOrderDao?.insertSeatOrder(order) ?: 0L
+    suspend fun updateSeatOrder(order: SeatOrder) = seatOrderDao?.updateSeatOrder(order) ?: Unit
+    suspend fun deleteSeatOrder(order: SeatOrder) = seatOrderDao?.deleteSeatOrder(order) ?: Unit
 }

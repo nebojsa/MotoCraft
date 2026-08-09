@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.entities.MaintenanceRecord
+import com.example.data.entities.SeatOrder
 import com.example.ui.components.StyledTextField
 import com.example.ui.theme.AmberOrange
 import com.example.ui.theme.CardBorderDark
@@ -150,6 +151,52 @@ object InvoiceGenerator {
             mileageKm = record.mileage,
             items = items,
             taxRatePercent = company.defaultTaxRatePercent
+        )
+    }
+
+    fun createFromSeatOrder(
+        order: SeatOrder,
+        company: CompanyDetails
+    ): ServiceInvoice {
+        val invoiceNo = "INV-SEAT-${order.id.toString().padStart(4, '0')}"
+        val lineItems = mutableListOf<InvoiceLineItem>()
+
+        lineItems.add(
+            InvoiceLineItem(
+                description = "Custom Saddle Base & Materials (${order.coverMaterialName} - ${order.coverTexture}, ${order.colorOption})",
+                quantity = 1.0,
+                unitPrice = order.baseMaterialCost
+            )
+        )
+
+        if (order.hasGelPad) {
+            lineItems.add(
+                InvoiceLineItem(
+                    description = "Anatomical Medical Gel Insert (~${order.gelPadAreaSqCm.toInt()} cm²)",
+                    quantity = 1.0,
+                    unitPrice = 45.0
+                )
+            )
+        }
+
+        lineItems.add(
+            InvoiceLineItem(
+                description = "Master Craft Upholstery & Shaping Labor (${order.ridingPosture} Spec, ${order.foamThicknessMm.toInt()}mm Foam)",
+                quantity = 1.0,
+                unitPrice = order.laborCost
+            )
+        )
+
+        return ServiceInvoice(
+            invoiceNumber = invoiceNo,
+            date = order.orderDate,
+            companyDetails = company,
+            bikeName = order.motorcycleModel,
+            mileageKm = 0,
+            customerName = order.customerName,
+            items = lineItems,
+            taxRatePercent = company.defaultTaxRatePercent,
+            notes = "Status: ${order.orderStatus.name} | Deposit Paid: $${String.format("%.2f", order.depositAmount)} | Remaining Balance: $${String.format("%.2f", order.balanceDue)}"
         )
     }
 }

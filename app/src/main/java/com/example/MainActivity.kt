@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MotoViewModel by viewModels {
         val database = AppDatabase.getDatabase(this)
-        val repository = MotoRepository(database.motoDao())
+        val repository = MotoRepository(database.motoDao(), database.seatOrderDao())
         MotoViewModelFactory(repository)
     }
 
